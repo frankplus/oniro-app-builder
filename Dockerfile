@@ -3,6 +3,8 @@
 # Use a base image with required build tools
 FROM ubuntu:22.04
 
+SHELL ["/bin/bash", "-c"] 
+
 # Install dependencies
 RUN apt update && \
     apt install -y curl unzip python3 python3-pip openjdk-11-jdk git jq && \
@@ -12,30 +14,31 @@ RUN apt update && \
 
 # Set environment variables
 ENV HOME=/root
-ENV SHELL=/bin/bash
 ENV OHOS_SDK_VERSION=4.1
-ENV HVIGOR_VERSION=5
-ENV NODE_VERSION=18
-ENV OHOS_SDK_HOME="${HOME}/setup-ohos-sdk"
-ENV HVIGOR_PATH="${HOME}/hvigor-installation"
 
-# Copy install_ohos_sdk.sh from local directory
+# Copy install_ohos_sdk.sh and cmd-tools
 COPY install_ohos_sdk.sh /tmp/install_ohos_sdk.sh
 
 # Run install_ohos_sdk.sh
-RUN chmod +x /tmp/install_ohos_sdk.sh && \
-    INPUT_VERSION=${OHOS_SDK_VERSION} INPUT_FIXUP_PATH=false /tmp/install_ohos_sdk.sh ${OHOS_SDK_HOME}
+RUN chmod +x /tmp/install_ohos_sdk.sh &&  \
+    export INPUT_VERSION=$OHOS_SDK_VERSION && \
+    export INPUT_MIRROR="false" && \
+    export INPUT_COMPONENTS="all" && \
+    export INPUT_FIXUP_PATH="true"&& \
+    export INPUT_CACHE="false" && \
+    export INPUT_WAS_CACHED="false" && \
+    source /tmp/install_ohos_sdk.sh
 
-# Install hvigor and its plugins
-RUN mkdir -p ${HVIGOR_PATH} && \
-    cd ${HVIGOR_PATH} && \
-    echo "@ohos:registry=https://repo.harmonyos.com/npm/" > .npmrc && \
-    npm install "@ohos/hvigor@${HVIGOR_VERSION}" "@ohos/hvigor-ohos-plugin@${HVIGOR_VERSION}"
+# Setup .npmrc File
+RUN echo "@ohos:registry=https://repo.harmonyos.com/npm/" > $HOME/.npmrc
+
+COPY ./cmd-tools ${HOME}/cmd-tools
+
+COPY ./builder.sh /tmp/builder.sh
+RUN chmod +x /tmp/builder.sh
 
 # Set work directory
 WORKDIR /workspace
 
-# Command to build the Oniro/OpenHarmony application
-CMD NODE_PATH=${HVIGOR_PATH}"/node_modules" node ${HVIGOR_PATH}/node_modules/@ohos/hvigor/bin/hvigor.js \
-    --no-daemon assembleHap -p product=default -p buildMode=release && \
-    cp -r entry/build/default/outputs/default/*.hap /workspace/output/
+# Set the default command to run builder
+CMD ["/tmp/builder.sh"]

@@ -40,15 +40,12 @@ The Dockerfile provides a complete environment for building Oniro/OpenHarmony Ar
 1. Uses `ubuntu:22.04` as the base image.
 2. Installs dependencies (`curl`, `unzip`, `python3`, `nodejs`, etc.).
 3. Downloads and installs OpenHarmony SDK.
-4. Installs `hvigor` and plugins.
+4. Install project dependencies such as hvigorw, ohpm
 5. Sets `/workspace` as the working directory.
 6. Builds the application and outputs artifacts to the `output` directory.
 
 ## Environment Variables
 - `OHOS_SDK_VERSION`: OpenHarmony SDK version (default: `4.1`).
-- `HVIGOR_VERSION`: `hvigor` version (default: `5`).
-- `OHOS_SDK_HOME`: Path for SDK installation.
-- `HVIGOR_PATH`: Path for `hvigor` installation.
 
 ## Contribution
 Contributions are welcome! Create a pull request or open an issue for suggestions or issues.
