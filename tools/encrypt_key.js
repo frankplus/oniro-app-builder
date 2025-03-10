@@ -5,7 +5,6 @@ const path = require("path");
 const crypto = require("crypto");
 
 // Constants
-const DEFAULT_MATERIAL_PATH = path.join(__dirname, "material");
 const DAEMON_ROOT_KEY_COMPONENT_LENGTH = 16;
 const DAEMON_SALT_KEY_LENGTH = 16;
 const DAEMON_WORK_KEY_LENGTH = 16;
@@ -229,25 +228,40 @@ function encryptPwd(password, materialPath) {
 /**
  * Main program:
  *  - Creates the material directory (if not already present)
- *  - Encrypts the password "123456" using the derived work key
- *  - Logs the resulting hexadecimal ciphertext
+ *  - Encrypts or decrypts the given password using the derived work key
+ *  - Logs the resulting hexadecimal ciphertext or plaintext
  */
 function main() {
+  const args = process.argv.slice(2);
+  if (args.length < 3) {
+    console.error("Usage: node encrypt_key.js <encrypt|decrypt> <password> <materialPath>");
+    process.exit(1);
+  }
+
+  const action = args[0];
+  const password = args[1];
+  const materialPath = args[2];
+
   // Create material if it doesn't exist
-  if (!fs.existsSync(DEFAULT_MATERIAL_PATH)) {
-    createMaterial(DEFAULT_MATERIAL_PATH);
+  if (!fs.existsSync(materialPath)) {
+    createMaterial(materialPath);
   } else {
-    // Optionally, you could re-create material if needed.
     console.log("Using existing material directory.");
   }
 
-  // Encrypt the password "123456"
-  const password = "123456";
-  const encryptedHex = encryptPwd(password, DEFAULT_MATERIAL_PATH);
-  console.log("Encrypted password (hex):", encryptedHex);
+  if (action === "encrypt") {
+    const encryptedHex = encryptPwd(password, materialPath);
+    console.log("Encrypted password (hex):", encryptedHex);
+  } else if (action === "decrypt") {
+    const key = getKey(materialPath);
+    const encryptedBuffer = Buffer.from(password, "hex");
+    const decryptedBuffer = decrypt(key, encryptedBuffer);
+    console.log("Decrypted password:", decryptedBuffer.toString("utf-8"));
+  } else {
+    console.error("Invalid action. Use 'encrypt' or 'decrypt'.");
+    process.exit(1);
+  }
 }
-
-main();
 
 module.exports = {
   encryptPwd,
