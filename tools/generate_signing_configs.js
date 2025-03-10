@@ -25,11 +25,12 @@ function copyFilesToProject(projectDir) {
     console.log("Files copied successfully.");
 }
 
-// Function to modify the profile template with the app's bundle name
+// Function to modify the profile template with the app's bundle name and distribution certificate
 function modifyProfileTemplate(projectDir) {
     console.log("Modifying profile template...");
     const appJsonPath = path.join(projectDir, "AppScope/app.json5");
     const profileTemplatePath = path.join(projectDir, "signatures/UnsgnedReleasedProfileTemplate.json");
+    const profileCertFilePath = path.join(projectDir, "signatures/OpenHarmonyProfileRelease.pem");
 
     if (!fs.existsSync(appJsonPath)) {
         console.error(`Error: ${appJsonPath} does not exist.`);
@@ -63,6 +64,16 @@ function modifyProfileTemplate(projectDir) {
     }
 
     profileTemplate["bundle-info"]["bundle-name"] = appJson["app"]["bundleName"];
+
+    // Extract the third certificate from OpenHarmonyProfileRelease.pem
+    const certContent = fs.readFileSync(profileCertFilePath, "utf-8");
+    const certs = certContent.split("-----END CERTIFICATE-----");
+    if (certs.length < 3) {
+        console.error(`Error: ${profileCertFilePath} does not contain enough certificates.`);
+        process.exit(1);
+    }
+    const thirdCert = certs[2].trim() + "\n-----END CERTIFICATE-----\n";
+    profileTemplate["bundle-info"]["distribution-certificate"] = thirdCert;
 
     fs.writeFileSync(profileTemplatePath, JSON.stringify(profileTemplate, null, 2));
     console.log("Profile template modified successfully.");
