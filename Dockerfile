@@ -50,11 +50,11 @@ ENV CMD_PATH="/root/command-line-tools"
 # Run cmd_tools_installer.sh from the tools directory
 RUN source $TOOLS_DIR/cmd_tools_installer.sh
 
-# Add cmd-tools to PATH
-ENV PATH="$PATH:$CMD_PATH/bin"
+# Add cmd-tools and TOOLS_DIR to PATH
+ENV PATH="$PATH:$CMD_PATH/bin:$TOOLS_DIR"
 
 # Set work directory
 WORKDIR /workspace
 
 # Set the default command to run builder
-CMD ["$TOOLS_DIR/builder.sh"]
+CMD ["builder.sh"]

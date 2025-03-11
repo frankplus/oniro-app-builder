@@ -4,8 +4,9 @@
 set -e
 
 show_usage() {
-    echo "Usage: $0 [project_directory]"
+    echo "Usage: $0 [project_directory] [--generate-signing-configs|-s]"
     echo "If no project_directory is provided, the current directory will be used."
+    echo "Use --generate-signing-configs or -s to generate signature keys and configs."
 }
 
 # Check for necessary environment variables
@@ -71,9 +72,21 @@ install_dependencies() {
     cat $HOME/.npmrc
 }
 
+generate_signing_configs() {
+    echo "=== Generating Signature Keys and Configs ==="
+    node "$TOOLS_DIR/generate_signing_configs.js"
+    echo "=== Signature Keys and Configs Generation Complete ==="
+}
+
 # Show usage if help is requested
 if [[ "$1" == "--help" || "$1" == "-h" ]]; then
     show_usage
+    exit 0
+fi
+
+# Check if the generate signing configs flag is set
+if [[ "$1" == "--generate-signing-configs" || "$1" == "-s" ]]; then
+    generate_signing_configs
     exit 0
 fi
 
