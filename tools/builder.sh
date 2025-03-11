@@ -3,14 +3,14 @@
 # Exit immediately if a command exits with a non-zero status
 set -e
 
+show_usage() {
+    echo "Usage: $0 [project_directory]"
+    echo "If no project_directory is provided, the current directory will be used."
+}
+
 # Check for necessary environment variables
 if [ -z "$OHOS_BASE_SDK_HOME" ]; then
     echo "::error::OHOS_BASE_SDK_HOME environment variable is not set"
-    exit 1
-fi
-
-if [ -z "$PROJECT_PATH" ]; then
-    echo "::error::PROJECT_PATH environment variable is not set"
     exit 1
 fi
 
@@ -19,59 +19,41 @@ if [ -z "$CMD_PATH" ]; then
     exit 1
 fi
 
+if [ -z "$TOOLS_DIR" ]; then
+    echo "::error::TOOLS_DIR environment variable is not set"
+    exit 1
+fi
+
+# Get the project directory from the first argument, default to the current directory
+PROJECT_DIR=${1:-$(pwd)}
+
+# This is a basic check to see if the project is an OpenHarmony project.
+# A more robust check might involve verifying if runtimeOS is set to 'OpenHarmony'.
+check_openharmony_project() {
+    if [ ! -f "$PROJECT_DIR/build-profile.json5" ]; then
+        echo "::error::This is not an OpenHarmony project. 'build-profile.json5' not found."
+        exit 1
+    fi
+    echo "=== OpenHarmony project detected ==="
+}
+
+# Setup hvigorw if not already present
 setup_hvigorw() {
-    echo "::group::Setting up hvigorw..."
-    
-    # Validate PROJECT_PATH is set
-    if [ -z "$PROJECT_PATH" ]; then
-        echo "::error::PROJECT_PATH environment variable is not set"
-        return 1
+    if [ ! -f "$PROJECT_DIR/hvigorw" ]; then
+        echo "=== hvigorw not found. Setting up hvigorw ==="
+        cp "$TOOLS_DIR/hvigorw" "$PROJECT_DIR"
+        cp -r "$TOOLS_DIR/hvigor" "$PROJECT_DIR"
+        echo "=== hvigorw setup complete ==="
+    else
+        echo "=== hvigorw already present ==="
     fi
 
-    # Check if hvigorw exists in the project
-    if [ ! -f "$PROJECT_PATH/hvigorw" ]; then
-        echo "::error::hvigorw file not found at: $PROJECT_PATH/hvigorw"
-        return 1
-    fi
-
-    # Ensure bin directory exists
-    mkdir -p "$CMD_PATH/bin"
-
-    # Create the hvigorw script with the resolved PROJECT_PATH
-    cat > "$CMD_PATH/bin/hvigorw" << EOF
-#!/usr/bin/env bash
-
-set -e
-HVIGORW_PATH="$PROJECT_PATH/hvigorw"
-
-# Preserve current directory
-ORIGINAL_DIR="\$(pwd)"
-
-# Change to the project directory, execute hvigorw, then return
-(cd "$PROJECT_PATH" && exec bash "\$HVIGORW_PATH" "\$@")
-RC=\$?
-
-# Return to original directory (though not strictly necessary due to subshell)
-cd "\$ORIGINAL_DIR"
-exit \$RC
-EOF
-
-    # Verify the script was created
-    if [ ! -f "$CMD_PATH/bin/hvigorw" ]; then
-        echo "::error::Failed to create hvigorw script"
-        return 1
-    fi
-
-    # Make the script executable
-    chmod +x "$CMD_PATH/bin/hvigorw"
-
-    echo "::debug::hvigorw script created at: $CMD_PATH/bin/hvigorw"
-    echo "::debug::Points to project hvigorw at: $PROJECT_PATH/hvigorw"
-    echo "::endgroup::"
+    chmod +x "$PROJECT_DIR/hvigorw"
 }
 
 install_dependencies() {
     echo "=== Installing Project Dependencies ==="
+    cd "$PROJECT_DIR"
     ohpm install --all
 
     # Verify Installation
@@ -82,9 +64,6 @@ install_dependencies() {
     echo "=== OHPM Installation ===" && \
     which ohpm && \
     ohpm -v && \
-    echo "=== Hvigor Installation ===" && \
-    which hvigorw && \
-    hvigorw --version && \
     echo "=== Node.js Version ===" && \
     node --version && \
     npm --version && \
@@ -92,11 +71,18 @@ install_dependencies() {
     cat $HOME/.npmrc
 }
 
+# Show usage if help is requested
+if [[ "$1" == "--help" || "$1" == "-h" ]]; then
+    show_usage
+    exit 0
+fi
+
+check_openharmony_project
 setup_hvigorw
 install_dependencies
 
 # Initialize and Build
-cd $PROJECT_PATH
-hvigorw --version --accept-license && \
-hvigorw clean --no-parallel --no-daemon && \
-hvigorw assembleHap --mode module -p product=default --stacktrace --no-parallel --no-daemon
+cd "$PROJECT_DIR"
+./hvigorw --version --accept-license && \
+./hvigorw clean --no-parallel --no-daemon && \
+./hvigorw assembleHap --mode module -p product=default --stacktrace --no-parallel --no-daemon

@@ -29,13 +29,14 @@ RUN chmod +x /tmp/install_ohos_sdk.sh && \
     source /tmp/install_ohos_sdk.sh
 
 # Copy the entire tools directory
-COPY ./tools /root/tools
+ENV TOOLS_DIR=/root/tools
+COPY ./tools $TOOLS_DIR
 
 # Set permissions for scripts in the tools directory
-RUN chmod +x /root/tools/*.sh
+RUN chmod +x $TOOLS_DIR/*.sh
 
-# Run npm install inside the /root/tools directory
-RUN cd /root/tools && npm install
+# Run npm install inside the tools directory
+RUN cd $TOOLS_DIR && npm install
 
 # Set OHOS_BASE_SDK_HOME environment variable
 ENV OHOS_BASE_SDK_HOME="${HOME}/setup-ohos-sdk/linux"
@@ -47,14 +48,13 @@ RUN echo "@ohos:registry=https://repo.harmonyos.com/npm/" > $HOME/.npmrc
 ENV CMD_PATH="/root/command-line-tools"
 
 # Run cmd_tools_installer.sh from the tools directory
-RUN source /root/tools/cmd_tools_installer.sh
+RUN source $TOOLS_DIR/cmd_tools_installer.sh
 
 # Add cmd-tools to PATH
 ENV PATH="$PATH:$CMD_PATH/bin"
 
 # Set work directory
-ENV PROJECT_PATH=/workspace
 WORKDIR /workspace
 
 # Set the default command to run builder
-CMD ["/root/tools/builder.sh"]
+CMD ["$TOOLS_DIR/builder.sh"]
