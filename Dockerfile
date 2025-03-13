@@ -28,6 +28,14 @@ RUN chmod +x /tmp/install_ohos_sdk.sh && \
     export INPUT_WAS_CACHED="false" && \
     source /tmp/install_ohos_sdk.sh
 
+# Set OHOS_BASE_SDK_HOME environment variable
+ENV OHOS_BASE_SDK_HOME="${HOME}/setup-ohos-sdk/linux"
+
+# Install command line tools
+ENV CMD_PATH="$HOME/command-line-tools"
+COPY /tools/cmd_tools_installer.sh /tmp/cmd_tools_installer.sh
+RUN . /tmp/cmd_tools_installer.sh
+
 # Copy the entire tools directory
 ENV TOOLS_DIR=/root/tools
 COPY ./tools $TOOLS_DIR
@@ -35,20 +43,11 @@ COPY ./tools $TOOLS_DIR
 # Set permissions for scripts in the tools directory
 RUN chmod +x $TOOLS_DIR/*.sh
 
-# Run npm install inside the tools directory
-RUN cd $TOOLS_DIR && npm install
-
-# Set OHOS_BASE_SDK_HOME environment variable
-ENV OHOS_BASE_SDK_HOME="${HOME}/setup-ohos-sdk/linux"
-
 # Setup .npmrc File
 RUN echo "@ohos:registry=https://repo.harmonyos.com/npm/" > $HOME/.npmrc
 
-# Install command line tools
-ENV CMD_PATH="/root/command-line-tools"
-
-# Run cmd_tools_installer.sh from the tools directory
-RUN source $TOOLS_DIR/cmd_tools_installer.sh
+# Run npm install inside the tools directory
+RUN cd $TOOLS_DIR && npm install
 
 # Add cmd-tools and TOOLS_DIR to PATH
 ENV PATH="$PATH:$CMD_PATH/bin:$TOOLS_DIR"

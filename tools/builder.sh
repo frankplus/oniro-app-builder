@@ -38,19 +38,6 @@ check_openharmony_project() {
     echo "=== OpenHarmony project detected ==="
 }
 
-# Setup hvigorw if not already present
-setup_hvigorw() {
-    if [ ! -f "$PROJECT_DIR/hvigorw" ]; then
-        echo "=== hvigorw not found. Setting up hvigorw ==="
-        cp "$TOOLS_DIR/hvigorw" "$PROJECT_DIR"
-        cp -r "$TOOLS_DIR/hvigor" "$PROJECT_DIR"
-        echo "=== hvigorw setup complete ==="
-    else
-        echo "=== hvigorw already present ==="
-    fi
-
-    chmod +x "$PROJECT_DIR/hvigorw"
-}
 
 install_dependencies() {
     echo "=== Installing Project Dependencies ==="
@@ -91,11 +78,10 @@ if [[ "$1" == "--generate-signing-configs" || "$1" == "-s" ]]; then
 fi
 
 check_openharmony_project
-setup_hvigorw
 install_dependencies
 
 # Initialize and Build
 cd "$PROJECT_DIR"
-./hvigorw --version --accept-license && \
-./hvigorw clean --no-parallel --no-daemon && \
-./hvigorw assembleHap --mode module -p product=default --stacktrace --no-parallel --no-daemon
+hvigorw --version --accept-license && \
+hvigorw clean --no-parallel --no-daemon && \
+hvigorw assembleHap --mode module -p product=default --stacktrace --no-parallel --no-daemon
