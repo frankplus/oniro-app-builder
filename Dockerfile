@@ -15,18 +15,14 @@ RUN apt update && \
 
 # Set environment variables
 ENV HOME=/root
-ENV OHOS_SDK_VERSION=5.0.0
 
-# Copy and run install_ohos_sdk.sh
-COPY tools/install_ohos_sdk.sh /tmp/install_ohos_sdk.sh
-RUN chmod +x /tmp/install_ohos_sdk.sh && \
-    export INPUT_VERSION=$OHOS_SDK_VERSION && \
-    export INPUT_MIRROR="false" && \
-    export INPUT_COMPONENTS="all" && \
-    export INPUT_FIXUP_PATH="true" && \
-    export INPUT_CACHE="false" && \
-    export INPUT_WAS_CACHED="false" && \
-    source /tmp/install_ohos_sdk.sh
+# Install command line tools
+ENV CMD_PATH="$HOME/command-line-tools"
+COPY /tools/cmd_tools_installer.sh /tmp/cmd_tools_installer.sh
+RUN . /tmp/cmd_tools_installer.sh
+
+# Set OHOS_BASE_SDK_HOME environment variable
+ENV OHOS_BASE_SDK_HOME="$CMD_PATH/sdk/default/openharmony"
 
 # Set OHOS_BASE_SDK_HOME environment variable
 ENV OHOS_BASE_SDK_HOME="${HOME}/setup-ohos-sdk/linux"
