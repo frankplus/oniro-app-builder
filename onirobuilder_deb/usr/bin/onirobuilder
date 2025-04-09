@@ -1,0 +1,149 @@
+#!/bin/bash
+# /usr/bin/onirobuilder
+# Wrapper script for OniroBuilder commands:
+#   init  - Install the OpenHarmony SDK and command-line tools.
+#   sign  - Generate signing keys and configs.
+#   build - Build an OpenHarmony application.
+#
+# NOTE: All supporting scripts and files are in /opt/onirobuilder.
+# Run 'onirobuilder init' first in a given shell before calling build or sign.
+
+set -e
+
+# Base directory where all files reside.
+BASE_DIR="/opt/onirobuilder"
+export CMD_PATH="$HOME/command-line-tools"
+export OHOS_BASE_SDK_HOME="$HOME/setup-ohos-sdk/linux"
+
+# Usage function.
+usage() {
+    echo "Usage: onirobuilder {init|build|sign [project_directory]}"
+    exit 1
+}
+
+# --------------------------------------------------
+# Initialize environment: install the SDK and tools.
+# --------------------------------------------------
+init() {
+    echo "=== Starting OniroBuilder Initialization ==="
+
+    # Install OpenHarmony SDK.
+    echo "Installing OpenHarmony SDK..."
+    export OHOS_SDK_VERSION="5.0.0"
+    export INPUT_VERSION="$OHOS_SDK_VERSION"
+    export INPUT_MIRROR="false"
+    export INPUT_COMPONENTS="all"
+    export INPUT_FIXUP_PATH="true"
+    export INPUT_CACHE="false"
+    export INPUT_WAS_CACHED="false"
+    bash "$BASE_DIR/install_ohos_sdk.sh"
+
+    # Install command-line tools.
+    echo "Installing command-line tools..."
+    bash "$BASE_DIR/cmd_tools_installer.sh"
+
+    # Install npm dependencies from package.json.
+    if [ -f "$BASE_DIR/package.json" ]; then
+        echo "Installing npm packages..."
+        cd "$BASE_DIR" && npm install
+    fi
+
+    # Setup npm registry for OpenHarmony.
+    echo "@ohos:registry=https://repo.harmonyos.com/npm/" > "$HOME/.npmrc"
+
+    echo "=== OniroBuilder Initialization Complete ==="
+}
+
+# --------------------------------------------------
+# Generate signing configurations.
+# --------------------------------------------------
+sign() {
+    # Use the first argument as the project directory, or default to current directory.
+    PROJECT_DIR="${1:-$(pwd)}"
+
+    # Basic check for an OpenHarmony project.
+    if [ ! -f "$PROJECT_DIR/build-profile.json5" ]; then
+        echo "Error: This is not an OpenHarmony project. 'build-profile.json5' not found in $PROJECT_DIR."
+        exit 1
+    fi
+
+    echo "=== Generating Signature Keys and Configs ==="
+    node "$BASE_DIR/generate_signing_configs.js" "$PROJECT_DIR"
+    echo "=== Signature Keys and Configs Generation Complete ==="
+}
+
+# --------------------------------------------------
+# Build an OpenHarmony application.
+# --------------------------------------------------
+build() {
+    # Use the first argument as the project directory, or default to current directory.
+    PROJECT_DIR="${1:-$(pwd)}"
+    echo "=== Building project in directory: $PROJECT_DIR ==="
+
+    # Verify that required environment variables are present.
+    if [ -z "$OHOS_BASE_SDK_HOME" ]; then
+        echo "Error: OHOS_BASE_SDK_HOME is not set. Please run 'onirobuilder init' first."
+        exit 1
+    fi
+    if [ -z "$CMD_PATH" ]; then
+        echo "Error: CMD_PATH is not set. Please run 'onirobuilder init' first."
+        exit 1
+    fi
+
+    # Basic check for an OpenHarmony project.
+    if [ ! -f "$PROJECT_DIR/build-profile.json5" ]; then
+        echo "Error: This is not an OpenHarmony project. 'build-profile.json5' not found in $PROJECT_DIR."
+        exit 1
+    fi
+    echo "=== OpenHarmony project detected ==="
+
+    # Install project dependencies.
+    echo "=== Installing Project Dependencies ==="
+    cd "$PROJECT_DIR"
+    $CMD_PATH/bin/ohpm install --all
+
+    # Execute build steps.
+    cd "$PROJECT_DIR"
+    # Check if hvigorw exists in the current project directory.
+    if [ -f "$PROJECT_DIR/hvigorw" ]; then
+        HVIGORW_CMD="$PROJECT_DIR/hvigorw"
+    else
+        HVIGORW_CMD="$CMD_PATH/bin/hvigorw"
+    fi
+
+    # Use the determined hvigorw command.
+    $HVIGORW_CMD --version --accept-license
+    $HVIGORW_CMD clean --no-parallel --no-daemon
+    $HVIGORW_CMD assembleHap --mode module -p product=default --stacktrace --no-parallel --no-daemon
+
+    echo "=== Build Process Complete ==="
+}
+
+# --------------------------------------------------
+# Command dispatch.
+# --------------------------------------------------
+if [ $# -lt 1 ]; then
+    usage
+fi
+
+COMMAND="$1"
+shift
+
+case "$COMMAND" in
+    init)
+        init
+        ;;
+    build)
+        build "$@"
+        ;;
+    sign)
+        sign
+        ;;
+    --help|-h)
+        usage
+        ;;
+    *)
+        echo "Unknown command: $COMMAND"
+        usage
+        ;;
+esac

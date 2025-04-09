@@ -13,47 +13,20 @@ RUN apt update && \
     curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
     apt install -y nodejs
 
-# Set environment variables
-ENV HOME=/root
-ENV OHOS_SDK_VERSION=5.0.0
+# Copy the deb package into the container
+COPY onirobuilder.deb /tmp/
 
-# Copy and run install_ohos_sdk.sh
-COPY tools/install_ohos_sdk.sh /tmp/install_ohos_sdk.sh
-RUN chmod +x /tmp/install_ohos_sdk.sh && \
-    export INPUT_VERSION=$OHOS_SDK_VERSION && \
-    export INPUT_MIRROR="false" && \
-    export INPUT_COMPONENTS="all" && \
-    export INPUT_FIXUP_PATH="true" && \
-    export INPUT_CACHE="false" && \
-    export INPUT_WAS_CACHED="false" && \
-    source /tmp/install_ohos_sdk.sh
+# Install the .deb package (ignore errors for missing deps, fix later)
+RUN dpkg -i /tmp/onirobuilder.deb || apt-get install -fy
 
-# Set OHOS_BASE_SDK_HOME environment variable
-ENV OHOS_BASE_SDK_HOME="${HOME}/setup-ohos-sdk/linux"
+# (Optional) Remove the deb package to keep image smaller
+RUN rm /tmp/onirobuilder.deb
 
-# Install command line tools
-ENV CMD_PATH="$HOME/command-line-tools"
-COPY /tools/cmd_tools_installer.sh /tmp/cmd_tools_installer.sh
-RUN . /tmp/cmd_tools_installer.sh
-
-# Copy the entire tools directory
-ENV TOOLS_DIR=/root/tools
-COPY ./tools $TOOLS_DIR
-
-# Set permissions for scripts in the tools directory
-RUN chmod +x $TOOLS_DIR/*.sh
-
-# Setup .npmrc File
-RUN echo "@ohos:registry=https://repo.harmonyos.com/npm/" > $HOME/.npmrc
-
-# Run npm install inside the tools directory
-RUN cd $TOOLS_DIR && npm install
-
-# Add cmd-tools and TOOLS_DIR to PATH
-ENV PATH="$PATH:$CMD_PATH/bin:$TOOLS_DIR"
+# Run `onirobuilder init` to set up dependencies
+RUN onirobuilder init
 
 # Set work directory
 WORKDIR /workspace
 
 # Set the default command to run builder
-CMD ["builder.sh"]
+ENTRYPOINT ["/usr/bin/onirobuilder"]
