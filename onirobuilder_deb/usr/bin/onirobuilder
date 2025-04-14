@@ -111,6 +111,8 @@ build() {
         HVIGORW_CMD="$CMD_PATH/bin/hvigorw"
     fi
 
+    chmod +x $HVIGORW_CMD
+
     # Use the determined hvigorw command.
     $HVIGORW_CMD --version --accept-license
     $HVIGORW_CMD clean --no-parallel --no-daemon
