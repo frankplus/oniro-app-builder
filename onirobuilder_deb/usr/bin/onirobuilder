@@ -25,11 +25,32 @@ usage() {
 # Initialize environment: install the SDK and tools.
 # --------------------------------------------------
 init() {
+    # Parse optional --sdk-version flag
+    SDK_VERSION="5.0.0"
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --sdk-version)
+                shift
+                if [[ $# -gt 0 ]]; then
+                    SDK_VERSION="$1"
+                    shift
+                else
+                    echo "Error: --sdk-version requires a value."
+                    exit 1
+                fi
+                ;;
+            *)
+                # Ignore unknown flags for now
+                shift
+                ;;
+        esac
+    done
+
     echo "=== Starting OniroBuilder Initialization ==="
 
     # Install OpenHarmony SDK.
-    echo "Installing OpenHarmony SDK..."
-    export OHOS_SDK_VERSION="5.0.0"
+    echo "Installing OpenHarmony SDK version $SDK_VERSION..."
+    export OHOS_SDK_VERSION="$SDK_VERSION"
     export INPUT_VERSION="$OHOS_SDK_VERSION"
     export INPUT_MIRROR="false"
     export INPUT_COMPONENTS="all"
@@ -133,7 +154,7 @@ shift
 
 case "$COMMAND" in
     init)
-        init
+        init "$@"
         ;;
     build)
         build "$@"
