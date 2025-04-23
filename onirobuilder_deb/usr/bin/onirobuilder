@@ -14,16 +14,68 @@ set -e
 BASE_DIR="/opt/onirobuilder"
 export CMD_PATH="$HOME/command-line-tools"
 export OHOS_BASE_SDK_HOME="$HOME/setup-ohos-sdk/linux"
+EMULATOR_DIR="$CMD_PATH/emulator"
+EMULATOR_BIN="$CMD_PATH/bin/oniro-emulator"
 
 # Usage function.
 usage() {
-    echo "Usage: onirobuilder {init|build|sign [project_directory]}"
+    echo "Usage: onirobuilder <command> [options]"
+    echo
+    echo "Commands:"
+    echo "  init [--sdk-version <version>]   Install the OpenHarmony SDK, command-line tools, and Oniro emulator."
+    echo "                                 Use --sdk-version to specify the SDK version (default: 5.0.0)."
+    echo "  build [project_directory]        Build an OpenHarmony application in the specified directory (default: current directory)."
+    echo "  sign [project_directory]         Generate signing keys and configs for the specified project (default: current directory)."
+    echo "  emulator [args...]               Start the Oniro emulator. Extra arguments are passed to the emulator."
+    echo "  --help, -h                       Show this help message."
     exit 1
 }
 
 # --------------------------------------------------
 # Initialize environment: install the SDK and tools.
 # --------------------------------------------------
+
+install_emulator() {
+    EMULATOR_URL="https://github.com/eclipse-oniro4openharmony/device_board_oniro/releases/download/v1.0.0/oniro_emulator.zip"
+    mkdir -p "$EMULATOR_DIR"
+    mkdir -p "$CMD_PATH/bin"
+    TMP_ZIP="/tmp/oniro_emulator.zip"
+    curl -L "$EMULATOR_URL" -o "$TMP_ZIP"
+    unzip -o "$TMP_ZIP" -d "$EMULATOR_DIR"
+    chmod +x "$EMULATOR_DIR/images/run.sh"
+    # Create launcher binary
+    cat <<EOF > "$EMULATOR_BIN"
+#!/bin/bash
+cd "\$(dirname "\$0")/../emulator/images" || exit
+exec "./run.sh" "\$@"
+EOF
+    chmod +x "$EMULATOR_BIN"
+    echo "Oniro emulator installed. Run 'oniro-emulator' to start."
+}
+
+add_env_to_shell_profile() {
+    SHELL_PROFILE="$HOME/.bashrc"
+    if [ -f "$HOME/.zshrc" ]; then
+        SHELL_PROFILE="$HOME/.zshrc"
+    fi
+    echo "Do you want to add OHOS_BASE_SDK_HOME and CMD_PATH/bin to your shell profile ($SHELL_PROFILE)? [y/N]: "
+    read -r env_ans
+    if [[ "$env_ans" =~ ^[Yy]$ ]]; then
+        if ! grep -q 'export OHOS_BASE_SDK_HOME=' "$SHELL_PROFILE"; then
+            echo "export OHOS_BASE_SDK_HOME=\"$OHOS_BASE_SDK_HOME\"" >> "$SHELL_PROFILE"
+        fi
+        if ! grep -q 'export CMD_PATH=' "$SHELL_PROFILE"; then
+            echo "export CMD_PATH=\"$CMD_PATH\"" >> "$SHELL_PROFILE"
+        fi
+        if ! grep -q 'export PATH=.*$CMD_PATH/bin' "$SHELL_PROFILE"; then
+            echo 'export PATH="$CMD_PATH/bin:$PATH"' >> "$SHELL_PROFILE"
+        fi
+        echo "Added OHOS_BASE_SDK_HOME and CMD_PATH/bin to PATH in $SHELL_PROFILE. Please restart your shell or run: source $SHELL_PROFILE"
+    else
+        echo "Skipped modifying $SHELL_PROFILE. You may need to set OHOS_BASE_SDK_HOME and update PATH manually."
+    fi
+}
+
 init() {
     # Parse optional --sdk-version flag
     SDK_VERSION="5.0.0"
@@ -49,19 +101,46 @@ init() {
     echo "=== Starting OniroBuilder Initialization ==="
 
     # Install OpenHarmony SDK.
-    echo "Installing OpenHarmony SDK version $SDK_VERSION..."
-    export OHOS_SDK_VERSION="$SDK_VERSION"
-    export INPUT_VERSION="$OHOS_SDK_VERSION"
-    export INPUT_MIRROR="false"
-    export INPUT_COMPONENTS="all"
-    export INPUT_FIXUP_PATH="true"
-    export INPUT_CACHE="false"
-    export INPUT_WAS_CACHED="false"
-    bash "$BASE_DIR/install_ohos_sdk.sh"
+    if [ -d "$OHOS_BASE_SDK_HOME" ]; then
+        read -p "OpenHarmony SDK already exists at $OHOS_BASE_SDK_HOME. Proceed with installation anyway? [y/N]: " sdk_ans
+        if [[ ! "$sdk_ans" =~ ^[Yy]$ ]]; then
+            echo "Skipping OpenHarmony SDK installation."
+        else
+            echo "Installing OpenHarmony SDK version $SDK_VERSION..."
+            export OHOS_SDK_VERSION="$SDK_VERSION"
+            export INPUT_VERSION="$OHOS_SDK_VERSION"
+            export INPUT_MIRROR="false"
+            export INPUT_COMPONENTS="all"
+            export INPUT_FIXUP_PATH="true"
+            export INPUT_CACHE="false"
+            export INPUT_WAS_CACHED="false"
+            bash "$BASE_DIR/install_ohos_sdk.sh"
+        fi
+    else
+        echo "Installing OpenHarmony SDK version $SDK_VERSION..."
+        export OHOS_SDK_VERSION="$SDK_VERSION"
+        export INPUT_VERSION="$OHOS_SDK_VERSION"
+        export INPUT_MIRROR="false"
+        export INPUT_COMPONENTS="all"
+        export INPUT_FIXUP_PATH="true"
+        export INPUT_CACHE="false"
+        export INPUT_WAS_CACHED="false"
+        bash "$BASE_DIR/install_ohos_sdk.sh"
+    fi
 
     # Install command-line tools.
-    echo "Installing command-line tools..."
-    bash "$BASE_DIR/cmd_tools_installer.sh"
+    if [ -d "$CMD_PATH" ]; then
+        read -p "Command-line tools already exist at $CMD_PATH. Proceed with installation anyway? [y/N]: " cmd_ans
+        if [[ ! "$cmd_ans" =~ ^[Yy]$ ]]; then
+            echo "Skipping command-line tools installation."
+        else
+            echo "Installing command-line tools..."
+            bash "$BASE_DIR/cmd_tools_installer.sh"
+        fi
+    else
+        echo "Installing command-line tools..."
+        bash "$BASE_DIR/cmd_tools_installer.sh"
+    fi
 
     # Install npm dependencies from package.json.
     if [ -f "$BASE_DIR/package.json" ]; then
@@ -71,6 +150,23 @@ init() {
 
     # Setup npm registry for OpenHarmony.
     echo "@ohos:registry=https://repo.harmonyos.com/npm/" > "$HOME/.npmrc"
+
+    # Ask user before modifying shell profile
+    add_env_to_shell_profile
+
+    # Install Oniro emulator
+    if [ -d "$EMULATOR_DIR" ]; then
+        read -p "Oniro emulator already exists at $EMULATOR_DIR. Proceed with installation anyway? [y/N]: " emu_ans
+        if [[ ! "$emu_ans" =~ ^[Yy]$ ]]; then
+            echo "Skipping Oniro emulator installation."
+        else
+            echo "Installing Oniro emulator..."
+            install_emulator
+        fi
+    else
+        echo "Installing Oniro emulator..."
+        install_emulator
+    fi
 
     echo "=== OniroBuilder Initialization Complete ==="
 }
@@ -164,6 +260,9 @@ case "$COMMAND" in
         ;;
     --help|-h)
         usage
+        ;;
+    emulator)
+        "$CMD_PATH/bin/oniro-emulator" "$@"
         ;;
     *)
         echo "Unknown command: $COMMAND"
