@@ -13,8 +13,8 @@ RUN apt update && \
     curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
     apt install -y nodejs
 
-# Copy the deb package into the container
-COPY onirobuilder.deb /tmp/
+# Download the deb package into the container
+RUN curl -L -o /tmp/onirobuilder.deb https://github.com/eclipse-oniro4openharmony/oniro-app-builder/releases/download/v0.2.0/onirobuilder_0.2.0_amd64.deb
 
 # Install the .deb package (ignore errors for missing deps, fix later)
 RUN dpkg -i /tmp/onirobuilder.deb || apt-get install -fy
