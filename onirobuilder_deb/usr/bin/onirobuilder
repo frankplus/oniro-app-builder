@@ -22,8 +22,9 @@ usage() {
     echo "Usage: onirobuilder <command> [options]"
     echo
     echo "Commands:"
-    echo "  init [--sdk-version <version>]   Install the OpenHarmony SDK, command-line tools, and Oniro emulator."
+    echo "  init [--sdk-version <version>] [--no-env]   Install the OpenHarmony SDK, command-line tools, and Oniro emulator."
     echo "                                 Use --sdk-version to specify the SDK version (default: 5.0.0)."
+    echo "                                 Use --no-env to skip modifying your shell profile."
     echo "  build [project_directory]        Build an OpenHarmony application in the specified directory (default: current directory)."
     echo "  sign [project_directory]         Generate signing keys and configs for the specified project (default: current directory)."
     echo "  emulator [args...]               Start the Oniro emulator. Extra arguments are passed to the emulator."
@@ -77,8 +78,9 @@ add_env_to_shell_profile() {
 }
 
 init() {
-    # Parse optional --sdk-version flag
+    # Parse optional --sdk-version and --no-env flags
     SDK_VERSION="5.0.0"
+    SKIP_ENV=0
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --sdk-version)
@@ -90,6 +92,10 @@ init() {
                     echo "Error: --sdk-version requires a value."
                     exit 1
                 fi
+                ;;
+            --no-env)
+                SKIP_ENV=1
+                shift
                 ;;
             *)
                 # Ignore unknown flags for now
@@ -151,8 +157,12 @@ init() {
     # Setup npm registry for OpenHarmony.
     echo "@ohos:registry=https://repo.harmonyos.com/npm/" > "$HOME/.npmrc"
 
-    # Ask user before modifying shell profile
-    add_env_to_shell_profile
+    # Ask user before modifying shell profile, unless --no-env was passed
+    if [ "$SKIP_ENV" -eq 0 ]; then
+        add_env_to_shell_profile
+    else
+        echo "Skipping shell profile modification (--no-env specified)."
+    fi
 
     # Install Oniro emulator
     if [ -d "$EMULATOR_DIR" ]; then

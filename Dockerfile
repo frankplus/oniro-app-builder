@@ -14,7 +14,7 @@ RUN apt update && \
     apt install -y nodejs
 
 # Download the deb package into the container
-RUN curl -L -o /tmp/onirobuilder.deb https://github.com/eclipse-oniro4openharmony/oniro-app-builder/releases/download/v0.2.0/onirobuilder_0.2.0_amd64.deb
+RUN curl -L -o /tmp/onirobuilder.deb https://github.com/eclipse-oniro4openharmony/oniro-app-builder/releases/latest/download/onirobuilder.deb
 
 # Install the .deb package (ignore errors for missing deps, fix later)
 RUN dpkg -i /tmp/onirobuilder.deb || apt-get install -fy
@@ -23,7 +23,7 @@ RUN dpkg -i /tmp/onirobuilder.deb || apt-get install -fy
 RUN rm /tmp/onirobuilder.deb
 
 # Run `onirobuilder init` to set up dependencies
-RUN onirobuilder init
+RUN onirobuilder init --no-env
 
 # Set work directory
 WORKDIR /workspace
