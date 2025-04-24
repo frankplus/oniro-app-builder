@@ -6,7 +6,7 @@ Oniro App Builder provides a Dockerized tool and a `.deb` package for building O
 - Pre-configured environment for Oniro/OpenHarmony ArkTS applications.
 - Dockerized solution for consistent builds.
 - `.deb` package for easy installation of tools and SDK setup.
-- `onirobuilder` executable for managing SDK and build commands.
+- `onirobuilder` executable for managing SDK, build, signing, and emulator commands.
 
 ## Getting Started
 
@@ -19,11 +19,14 @@ $ sudo apt-get install -fy  # Fix missing dependencies if needed
 ```
 
 ### Initialize the Environment
-Run the following command to install the OpenHarmony SDK and required tools:
+Run the following command to install the OpenHarmony SDK, required tools, and Oniro emulator:
 
 ```bash
 $ onirobuilder init
 ```
+
+- Use `--sdk-version <version>` to specify the SDK version (default: 5.0.0).
+- Use `--no-env` to skip modifying your shell profile.
 
 ### Build an Application
 Navigate to your application project and run:
@@ -43,6 +46,15 @@ $ onirobuilder sign
 
 This updates the `build-profile.json5` file with the new signing configs.
 
+### Using the Oniro Emulator
+The Oniro emulator is installed during `onirobuilder init`. To start the emulator:
+
+```bash
+$ onirobuilder emulator [args...]
+```
+
+Any extra arguments are passed to the emulator.
+
 ### Using Docker
 Alternatively, you can use the Dockerized environment:
 
@@ -61,10 +73,10 @@ Ensure [Docker](https://docs.docker.com/get-docker/) is installed.
     $ docker run --rm -v $(pwd):/workspace oniro-app-builder build
     ```
 
-3. Access the container's shell for debugging:
+3. Access the container's shell:
 
     ```bash
-    $ docker run --rm -it -v $(pwd):/workspace oniro-app-builder /bin/bash
+    $ docker run --rm -it -v $(pwd):/workspace --entrypoint bash oniro-app-builder
     ```
 
 ## Dockerfile Overview
