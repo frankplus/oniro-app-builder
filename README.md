@@ -11,7 +11,7 @@ Oniro App Builder provides a Dockerized tool and a `.deb` package for building O
 ## Getting Started
 
 ### Install Oniro App Builder
-Download and install the `.deb` package:
+Download the latest `.deb` package from the [GitHub Releases](https://github.com/eclipse-oniro4openharmony/oniro-app-builder/releases) page or from the CI workflow artifacts, then install it:
 
 ```bash
 $ sudo dpkg -i onirobuilder.deb

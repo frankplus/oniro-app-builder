@@ -13,8 +13,11 @@ RUN apt update && \
     curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
     apt install -y nodejs
 
-# Download the deb package into the container
-RUN curl -L -o /tmp/onirobuilder.deb https://github.com/eclipse-oniro4openharmony/oniro-app-builder/releases/latest/download/onirobuilder.deb
+# Copy the local debian package directory into the image
+COPY onirobuilder_deb /tmp/onirobuilder_deb
+
+# Build the .deb package from the directory
+RUN dpkg-deb --build /tmp/onirobuilder_deb /tmp/onirobuilder.deb
 
 # Install the .deb package (ignore errors for missing deps, fix later)
 RUN dpkg -i /tmp/onirobuilder.deb || apt-get install -fy
@@ -24,6 +27,9 @@ RUN rm /tmp/onirobuilder.deb
 
 # Run `onirobuilder init` to set up dependencies
 RUN onirobuilder init --no-env
+
+# remove temporary files to keep the image smaller
+RUN rm -rf /tmp/*
 
 # Set work directory
 WORKDIR /workspace
