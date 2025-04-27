@@ -1,0 +1,46 @@
+name: 'OniroBuilder'
+description: 'Sets up the Oniro/OpenHarmony SDK and tools for CI/CD workflows.'
+inputs:
+  working-directory:
+    description: 'Directory containing the app to build'
+    required: true
+runs:
+  using: 'composite'
+  steps:
+    - name: Install system dependencies
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y curl unzip python3 python3-pip openjdk-11-jdk git jq
+
+    - name: Build debian package
+      id: build
+      uses: jiro4989/build-deb-action@v4
+      with:
+        package: onirobuilder
+        package_root: onirobuilder_deb
+        maintainer: ${{ github.actor }}
+        version: 0.0.0-dev
+        arch: amd64
+
+    - name: Install OniroBuilder
+      shell: bash
+      run: |
+        sudo dpkg -i ${{ steps.build.outputs.file_name }} || sudo apt-get install -fy
+
+    - name: Initialize OniroBuilder environment
+      shell: bash
+      run: |
+        onirobuilder init --no-env
+
+    - name: Sign application
+      shell: bash
+      run: |
+        cd "${{ inputs.working-directory }}"
+        onirobuilder sign
+
+    - name: Build application
+      shell: bash
+      run: |
+        cd "${{ inputs.working-directory }}"
+        onirobuilder build

@@ -1,0 +1,19 @@
+name: Build Sample App
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup and Build Sample App
+        uses: ./.github/actions/onirobuilder
+        with:
+          working-directory: sample-app
