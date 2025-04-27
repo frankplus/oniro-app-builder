@@ -8,12 +8,17 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: oniro-runner
+    container:
+      image: francescopham/oniro-builder
+    env:
+      HOME: /root
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup and Build Sample App
-        uses: ./.github/actions/onirobuilder
-        with:
-          working-directory: sample-app
+      - name: Build and sign app
+        run: |
+          cd "$GITHUB_WORKSPACE/sample_app"
+          onirobuilder sign
+          onirobuilder build
